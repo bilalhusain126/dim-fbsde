@@ -2,7 +2,7 @@
 
 This repository contains the PyTorch implementation of the **Deep Iterative Method**, a numerical framework for solving high-dimensional Forward-Backward Stochastic Differential Equations (FBSDEs). This code accompanies my Master's thesis **"A Deep Iterative Method for High-Dimensional Coupled and McKean-Vlasov FBSDEs"** (University of Toronto, 2025).
 
-FBSDEs provide the mathematical foundation for a wide range of problems in quantitative finance, stochastic control, and engineering. They arise naturally in determining optimal strategies in dynamic, uncertain environments—such as derivative pricing, portfolio optimization, and optimal control of stochastic systems.
+FBSDEs provide the mathematical foundation for a wide range of problems in quantitative finance, stochastic control, and engineering. They arise naturally in determining optimal strategies in dynamic, uncertain environments—such as derivative pricing, portfolio optimization, and stochastic control.
 
 ## Overview
 
@@ -25,7 +25,7 @@ The solver overcomes the curse of dimensionality by approximating the solution m
     *   **Uncoupled:** Standard systems where forward dynamics are independent of $(Y, Z)$.
     *   **Coupled:** Systems where $X_t$ depends on $Y_t$ and $Z_t$, resolved via a Global Picard Iteration.
     *   **McKean-Vlasov:** Mean-field systems where coefficients depend on the law $\mathcal{L}(X_t, Y_t, Z_t)$.
-*   **Rigorous Benchmarking:** Includes five standard test equations with analytical solutions for the different problem classes. 
+*   **Rigorous Benchmarking:** Includes five benchmark equations with analytical solutions for the different problem classes. 
 *   **Two Z-Approximation Schemes:** Supports both **Gradient-based** and **Regression-based** approximation for the control process.
 *   **GPU Accelerated:** Fully vectorized PyTorch implementation supporting CUDA execution for high-dimensional problems.
 
@@ -228,7 +228,7 @@ Z_t \approx \frac{1}{\Delta t} \mathbb{E}\left[ (Y_{t+\Delta t} - Y_t) \Delta W_
 ## Examples
 
 See the `notebooks/` directory for comprehensive demonstrations:
-- `benchmark_demonstrations.ipynb`: Complete examples for five benchmark problems with visualization and error analysis
+- `benchmark_demonstrations.ipynb`: Complete examples for the five benchmark problems with visualization and error analysis
 
 ## Citation
 
