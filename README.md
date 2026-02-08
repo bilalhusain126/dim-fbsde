@@ -2,7 +2,7 @@
 
 This repository contains the PyTorch implementation of the **Deep Iterative Method**, a numerical framework for solving high-dimensional Forward-Backward Stochastic Differential Equations (FBSDEs). This code accompanies my Master's thesis **"A Deep Iterative Method for High-Dimensional Coupled and McKean-Vlasov FBSDEs"** (University of Toronto, 2025).
 
-FBSDEs provide the mathematical foundation for a wide range of problems in quantitative finance, stochastic control, and engineering. They arise naturally in determining optimal strategies in dynamic, uncertain environments—such as derivative pricing, portfolio optimization, and stochastic control.
+FBSDEs provide the mathematical foundation for a wide range of problems in quantitative finance and engineering. They arise naturally in determining optimal strategies in dynamic, uncertain environments—such as derivative pricing, portfolio optimization, and stochastic control.
 
 ## Overview
 
