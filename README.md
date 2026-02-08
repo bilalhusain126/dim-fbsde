@@ -228,7 +228,7 @@ Z_t \approx \frac{1}{\Delta t} \mathbb{E}\left[ (Y_{t+\Delta t} - Y_t) \Delta W_
 ## Examples
 
 See the `notebooks/` directory for comprehensive demonstrations:
-- `benchmark_demonstrations.ipynb`: Complete examples for all five benchmark problems with visualization and error analysis
+- `benchmark_demonstrations.ipynb`: Complete examples for five benchmark problems with visualization and error analysis
 
 ## Citation
 
