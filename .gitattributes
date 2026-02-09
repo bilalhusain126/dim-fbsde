@@ -1,2 +1,2 @@
-# Classify Jupyter notebooks as Python for language statistics
+# Classify Jupyter notebooks as Python
 *.ipynb linguist-language=Python
