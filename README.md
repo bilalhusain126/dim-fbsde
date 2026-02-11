@@ -1,6 +1,6 @@
 # Deep Iterative Method for High-Dimensional FBSDEs
 
-This repository contains the PyTorch implementation of the **Deep Iterative Method**, a numerical framework for solving high-dimensional Forward-Backward Stochastic Differential Equations (FBSDEs). This code accompanies my Master's thesis **"A Deep Iterative Method for High-Dimensional Coupled and McKean-Vlasov FBSDEs"** (University of Toronto, 2025).
+This repository contains the PyTorch implementation of the **Deep Iterative Method**, a numerical framework for solving high-dimensional Forward-Backward Stochastic Differential Equations (FBSDEs). This code accompanies my Master's thesis **["Deep Learning for High-Dimensional Forward-Backward Stochastic Differential Equations"](https://utoronto.scholaris.ca/items/15db450b-5204-4a59-8305-98f5e58e04da)** (University of Toronto, 2025).
 
 FBSDEs provide the mathematical foundation for a wide range of problems in quantitative finance and engineering. They arise naturally in determining optimal strategies in dynamic, uncertain environments—such as derivative pricing, portfolio optimization, and stochastic control.
 
@@ -237,9 +237,10 @@ If you use this code in your research, please cite:
 ```bibtex
 @mastersthesis{husain2025fbsde,
   author  = {Bilal Saleh Husain},
-  title   = {A Deep Iterative Method for High-Dimensional Coupled and McKean-Vlasov FBSDEs},
+  title   = {Deep Learning for High-Dimensional Forward-Backward Stochastic Differential Equations},
   school  = {University of Toronto},
-  year    = {2025}
+  year    = {2025},
+  url     = {https://utoronto.scholaris.ca/items/15db450b-5204-4a59-8305-98f5e58e04da}
 }
 ```
 
