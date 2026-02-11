@@ -37,8 +37,8 @@ The solver overcomes the curse of dimensionality by approximating the solution m
 
 ```bash
 # Clone the repository
-git clone https://github.com/bilalhusain126/DIM-FBSDEs.git
-cd DIM-FBSDEs
+git clone https://github.com/bilalhusain126/dim-fbsde.git
+cd dim-fbsde
 
 # Install the package
 pip install -e .
