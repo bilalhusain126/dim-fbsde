@@ -11,9 +11,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-plt.style.use('seaborn-v0_8-whitegrid')
-plt.rcParams['axes.grid'] = False
-
 
 def _evaluate_model_on_paths(nn_Y, nn_Z, z_method, X_paths, time_grid, device, equation=None, z_fp_iterations=5):
     """
@@ -130,37 +127,37 @@ def _evaluate_model_on_paths(nn_Y, nn_Z, z_method, X_paths, time_grid, device, e
     return Y_paths.cpu().numpy(), Z_paths.cpu().numpy()
 
 
-def plot_pathwise_comparison(solutions, labels, analytical_Y_func, analytical_Z_func,
+def plot_pathwise_comparison(solutions, labels, analytical_Y_func=None, analytical_Z_func=None,
                              path_indices=None, component_idx=0, device='cpu',
                              analytical_Y_kwargs=None, analytical_Z_kwargs=None,
                              models=None, z_methods=None, equation=None, num_paths_to_plot=5,
-                             z_fp_iterations=5):
+                             z_fp_iterations=5, colors=None, figsize=None):
     """
-    Plots a path-by-path comparison of numerical FBSDE solutions against an analytical solution.
+    Plots a path-by-path comparison of trained FBSDE models against an analytical solution.
 
-    Supports two modes:
-    1. Solution-based (default): Uses pre-computed solutions from solver.solve()
-    2. Model-based (recommended for comparisons): Evaluates trained models on same X paths
-
-    For fair method comparison, use model-based mode with models parameter.
+    Evaluates all models on identical X paths drawn from the reference solution, ensuring
+    a fair comparison between methods.
 
     GPU-accelerated: Converts numpy arrays to tensors, computes on device, then converts to numpy for plotting.
 
     Args:
-        solutions (list): List of solution dictionaries OR single solution for X paths in model mode.
-        labels (list): List of string labels for each solution/model.
-        analytical_Y_func (function): Function for analytical Y path.
-        analytical_Z_func (function): Function for analytical Z path.
+        solutions (list): List containing the reference solution dictionary (used to extract
+            X paths and time grid). Only the first element is used for path extraction.
+        labels (list): List of string labels for each model.
+        analytical_Y_func (function, optional): Function for analytical Y path. If None, omitted.
+        analytical_Z_func (function, optional): Function for analytical Z path. If None, omitted.
         path_indices (list, optional): Specific path indices to plot.
         component_idx (int, optional): Z component to plot. Defaults to 0.
         device (str, optional): Device for computations. Defaults to 'cpu'.
         analytical_Y_kwargs (dict, optional): Extra kwargs for analytical_Y_func.
         analytical_Z_kwargs (dict, optional): Extra kwargs for analytical_Z_func.
-        models (list, optional): List of (nn_Y, nn_Z) tuples for model-based plotting.
-        z_methods (list, optional): List of z_method strings ('gradient' or 'regression') for each model.
-        equation (FBSDE, optional): Equation object (required for gradient method in model-based mode).
+        models (list): List of (nn_Y, nn_Z) tuples, one per method being compared.
+        z_methods (list): List of z_method strings ('gradient' or 'regression') for each model.
+        equation (FBSDE, optional): Equation object (required when using gradient method).
         num_paths_to_plot (int, optional): Number of paths to evaluate and plot. Defaults to 5.
         z_fp_iterations (int, optional): Fixed-point iterations for coupled Z in gradient method. Defaults to 5.
+        colors (list, optional): List of colours for each model. If None, uses a built-in default palette.
+        figsize (tuple, optional): Figure size as (width, height). If None, defaults to (13, 5).
 
     Returns:
         matplotlib.figure.Figure: The top-level figure container.
@@ -186,7 +183,7 @@ def plot_pathwise_comparison(solutions, labels, analytical_Y_func, analytical_Z_
     time_grid_np = solutions[0]['time']
     X_paths_full = solutions[0]['X']
 
-    # --- Select paths to plot FIRST (before evaluation) ---
+    # --- Select paths to plot first (before evaluation) ---
     if path_indices is None:
         num_to_plot = min(num_paths_to_plot, X_paths_full.shape[0])
         path_indices = np.random.choice(X_paths_full.shape[0], size=num_to_plot, replace=False)
@@ -194,54 +191,39 @@ def plot_pathwise_comparison(solutions, labels, analytical_Y_func, analytical_Z_
     # Extract only the paths we'll actually plot
     X_paths_np = X_paths_full[path_indices]
 
-    # MODEL-BASED MODE: Evaluate models on same X paths
-    if models is not None:
-        if z_methods is None:
-            raise ValueError("z_methods must be provided when using models")
-        if len(models) != len(labels) or len(models) != len(z_methods):
-            raise ValueError("Number of models, labels, and z_methods must match")
-        if 'gradient' in z_methods and equation is None:
-            raise ValueError("equation parameter is required when using gradient method")
+    # Validate model inputs
+    if models is None:
+        raise ValueError("models must be provided")
+    if z_methods is None:
+        raise ValueError("z_methods must be provided")
+    if len(models) != len(labels) or len(models) != len(z_methods):
+        raise ValueError("Number of models, labels, and z_methods must match")
+    if 'gradient' in z_methods and equation is None:
+        raise ValueError("equation parameter is required when using gradient method")
 
-        logger.info(f"Using model-based comparison: evaluating all models on {len(path_indices)} identical X paths")
+    logger.info(f"Evaluating {len(models)} models on {len(path_indices)} identical X paths")
 
-        # Generate Y and Z predictions for each model
-        Y_paths_list = []
-        Z_paths_list = []
+    # Generate Y and Z predictions for each model
+    Y_paths_list = []
+    Z_paths_list = []
 
-        for (nn_Y, nn_Z), z_method in zip(models, z_methods):
-            Y_pred, Z_pred = _evaluate_model_on_paths(
-                nn_Y, nn_Z, z_method, X_paths_np, time_grid_np, device,
-                equation=equation, z_fp_iterations=z_fp_iterations
-            )
-            Y_paths_list.append(Y_pred)
-            Z_paths_list.append(Z_pred)
-
-    # SOLUTION-BASED MODE: Use pre-computed solutions
-    else:
-        if len(solutions) != len(labels):
-            raise ValueError(f"Number of solutions ({len(solutions)}) must match number of labels ({len(labels)})")
-
-        # Warn if X paths differ
-        for i, solution in enumerate(solutions[1:], start=1):
-            if not np.allclose(solution['X'][path_indices], X_paths_np, rtol=1e-5, atol=1e-8):
-                logger.warning(
-                    f"Solution {i} has different X paths than solution 0. "
-                    "For fair comparison, use model-based mode with 'models' parameter."
-                )
-
-        # Extract only the selected paths from pre-computed solutions
-        Y_paths_list = [sol['Y'][path_indices] for sol in solutions]
-        Z_paths_list = [sol['Z'][path_indices] for sol in solutions]
+    for (nn_Y, nn_Z), z_method in zip(models, z_methods):
+        Y_pred, Z_pred = _evaluate_model_on_paths(
+            nn_Y, nn_Z, z_method, X_paths_np, time_grid_np, device,
+            equation=equation, z_fp_iterations=z_fp_iterations
+        )
+        Y_paths_list.append(Y_pred)
+        Z_paths_list.append(Z_pred)
 
     # --- Convert to tensors for GPU acceleration ---
     time_grid = torch.tensor(time_grid_np, dtype=torch.float32, device=device)
     X_paths = torch.tensor(X_paths_np, dtype=torch.float32, device=device)
 
-    fig, axes = plt.subplots(1, 2, figsize=(13, 5))
+    fig, axes = plt.subplots(1, 2, figsize=figsize if figsize is not None else (13, 5))
 
     # Define colors and line styles for different methods
-    colors = ['r', 'g', 'orange', 'purple', 'brown', 'pink']
+    if colors is None:
+        colors = ['r', 'g', 'orange', 'purple', 'brown', 'pink']
     linestyles = ['--', '--', '--', '--', '--', '--']
 
     # --- Plotting Loop ---
@@ -249,42 +231,44 @@ def plot_pathwise_comparison(solutions, labels, analytical_Y_func, analytical_Z_
         # Get single path as tensor (i is now the index into our selected subset)
         X_path_single = X_paths[i]  # Shape: [N+1, dim_x]
 
-        # -- Compute Analytical Y (on GPU) --
-        Y_analytical_list = []
-        with torch.no_grad():
-            for t_idx in range(len(time_grid)):
-                t_val = time_grid[t_idx]
-                x_val = X_path_single[t_idx:t_idx+1, :]  # Shape: [1, dim_x]
-                y_val = analytical_Y_func(t_val, x_val, **analytical_Y_kwargs)
-                Y_analytical_list.append(y_val.squeeze())
-        Y_analytical = torch.stack(Y_analytical_list).cpu().numpy()
+        # -- Compute and plot Analytical Y (on GPU) --
+        if analytical_Y_func is not None:
+            Y_analytical_list = []
+            with torch.no_grad():
+                for t_idx in range(len(time_grid)):
+                    t_val = time_grid[t_idx]
+                    x_val = X_path_single[t_idx:t_idx+1, :]  # Shape: [1, dim_x]
+                    y_val = analytical_Y_func(t_val, x_val, **analytical_Y_kwargs)
+                    Y_analytical_list.append(y_val.squeeze())
+            Y_analytical = torch.stack(Y_analytical_list).cpu().numpy()
+            label_analytical = "Analytical" if i == 0 else None
+            axes[0].plot(time_grid_np, Y_analytical, 'b', linewidth=1.5, label=label_analytical)
 
-        # -- Compute Analytical Z (on GPU) --
-        Z_analytical_list = []
-        with torch.no_grad():
-            for t_idx in range(len(time_grid) - 1):
-                t_val = time_grid[t_idx]
-                x_val = X_path_single[t_idx:t_idx+1, :]  # Shape: [1, dim_x]
-                z_val = analytical_Z_func(t_val, x_val, **analytical_Z_kwargs)
-                Z_analytical_list.append(z_val.squeeze())
-        Z_analytical_tensor = torch.stack(Z_analytical_list)
-        Z_analytical_np = Z_analytical_tensor.cpu().numpy()
+        # -- Compute and plot Analytical Z (on GPU) --
+        if analytical_Z_func is not None:
+            Z_analytical_list = []
+            with torch.no_grad():
+                for t_idx in range(len(time_grid) - 1):
+                    t_val = time_grid[t_idx]
+                    x_val = X_path_single[t_idx:t_idx+1, :]  # Shape: [1, dim_x]
+                    z_val = analytical_Z_func(t_val, x_val, **analytical_Z_kwargs)
+                    Z_analytical_list.append(z_val.squeeze())
+            Z_analytical_tensor = torch.stack(Z_analytical_list)
+            Z_analytical_np = Z_analytical_tensor.cpu().numpy()
 
-        # Handle different Z output formats from analytical functions
-        # Case 1: Scalar Z [N] - use directly
-        # Case 2: Vector Z [N, dim_w] - select component
-        # Case 3: Matrix Z [N, dim_y, dim_w] - select Y component and W component
-        if Z_analytical_np.ndim == 1:
-            Z_analytical_plot = Z_analytical_np
-        elif Z_analytical_np.ndim == 2:
-            Z_analytical_plot = Z_analytical_np[:, component_idx]
-        else:
-            Z_analytical_plot = Z_analytical_np[:, 0, component_idx]
+            # Handle different Z output formats from analytical functions
+            # Case 1: Scalar Z [N] - use directly
+            # Case 2: Vector Z [N, dim_w] - select component
+            # Case 3: Matrix Z [N, dim_y, dim_w] - select Y component and W component
+            if Z_analytical_np.ndim == 1:
+                Z_analytical_plot = Z_analytical_np
+            elif Z_analytical_np.ndim == 2:
+                Z_analytical_plot = Z_analytical_np[:, component_idx]
+            else:
+                Z_analytical_plot = Z_analytical_np[:, 0, component_idx]
 
-        # Plot analytical solution (once per path, blue solid line)
-        label_analytical = "Analytical" if i == 0 else None
-        axes[0].plot(time_grid_np, Y_analytical, 'b', linewidth=1.5, label=label_analytical)
-        axes[1].plot(time_grid_np[:-1], Z_analytical_plot, 'b', linewidth=1.5, label=label_analytical)
+            label_analytical_z = "Analytical" if i == 0 else None
+            axes[1].plot(time_grid_np[:-1], Z_analytical_plot, 'b', linewidth=1.5, label=label_analytical_z)
 
         # Plot each method's approximation
         for method_idx, (Y_paths_np, Z_paths_np, label) in enumerate(zip(Y_paths_list, Z_paths_list, labels)):
@@ -328,7 +312,7 @@ def plot_Y_error_subplots(
     models, z_methods, labels, equation, X_paths, time_grid, device,
     analytical_Y_func, analytical_Y_kwargs=None,
     num_error_paths=50, spaghetti_alpha=0.05, log_eps=1e-9,
-    y_component_idx=0, z_fp_iterations=5
+    y_component_idx=0, z_fp_iterations=5, figsize=None
 ):
     """
     Plot Y approximation errors as spaghetti plots with median.
@@ -351,6 +335,7 @@ def plot_Y_error_subplots(
         log_eps (float, optional): Minimum value for log scale. Defaults to 1e-9.
         y_component_idx (int, optional): Y component index. Defaults to 0.
         z_fp_iterations (int, optional): Fixed-point iterations for Z. Defaults to 5.
+        figsize (tuple, optional): Figure size as (width, height). If None, defaults to (6*ncols, 4*nrows).
 
     Returns:
         matplotlib.figure.Figure: The figure
@@ -399,7 +384,7 @@ def plot_Y_error_subplots(
     nrows = (num_models + ncols - 1) // ncols
 
     fig, axes = plt.subplots(
-        nrows, ncols, figsize=(6 * ncols, 4 * nrows),
+        nrows, ncols, figsize=figsize if figsize is not None else (6 * ncols, 4 * nrows),
         squeeze=False, sharex=True, sharey=True
     )
     axes = axes.flatten()
@@ -468,7 +453,7 @@ def plot_Z_error_subplots(
     models, z_methods, labels, equation, X_paths, time_grid, device,
     analytical_Z_func, analytical_Z_kwargs=None,
     num_error_paths=50, spaghetti_alpha=0.05, log_eps=1e-9,
-    z_fp_iterations=5
+    z_fp_iterations=5, figsize=None
 ):
     """
     Plot Z approximation errors as spaghetti plots with median.
@@ -490,6 +475,7 @@ def plot_Z_error_subplots(
         spaghetti_alpha (float, optional): Alpha for individual paths. Defaults to 0.05.
         log_eps (float, optional): Minimum value for log scale. Defaults to 1e-9.
         z_fp_iterations (int, optional): Fixed-point iterations for Z. Defaults to 5.
+        figsize (tuple, optional): Figure size as (width, height). If None, defaults to (6*ncols, 4*nrows).
 
     Returns:
         matplotlib.figure.Figure: The figure
@@ -548,7 +534,7 @@ def plot_Z_error_subplots(
     nrows = (num_models + ncols - 1) // ncols
 
     fig, axes = plt.subplots(
-        nrows, ncols, figsize=(6 * ncols, 4 * nrows),
+        nrows, ncols, figsize=figsize if figsize is not None else (6 * ncols, 4 * nrows),
         squeeze=False, sharex=True, sharey=True
     )
     axes = axes.flatten()

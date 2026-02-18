@@ -153,7 +153,8 @@ dim_fbsde/
 ├── nets/                  # Neural network architectures
 │   └── mlp.py             # Multi-layer perceptron for Y and Z approximation
 ├── utils/                 # Utilities
-│   └── visualizations.py  # Pathwise comparison and error analysis plots
+│   ├── visualizations.py  # Pathwise comparison and error analysis plots
+│   └── plot_style.py      # Publication-quality matplotlib style configuration
 └── config.py              # Configuration dataclasses (SolverConfig, TrainingConfig)
 ```
 

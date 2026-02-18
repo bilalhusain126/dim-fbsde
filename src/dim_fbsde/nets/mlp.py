@@ -11,7 +11,7 @@ References:
 
 import torch
 import torch.nn as nn
-from typing import List, Union
+from typing import List
 
 class MLP(nn.Module):
     """
