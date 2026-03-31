@@ -117,12 +117,8 @@ class DGMSolver:
         # sigma sigma^T: [N1, dim_x, dim_x]
         sigma_sigmaT = torch.bmm(sigma, sigma.transpose(1, 2))  # [N1, dx, dx]
 
-        # Compute Hessian diagonal entries weighted by sigma_sigmaT.
-        # For efficiency, compute sum_i sum_j (sigma_sigmaT)_{ij} d2u/dxi dxj.
-        # This equals Tr(sigma sigma^T H_x u).
-        #
-        # We compute d2u/dxi dxj by differentiating du/dxi w.r.t. x, then
-        # dot with sigma_sigmaT row i.
+        # Compute Tr(sigma sigma^T H_x u) row by row to avoid
+        # materializing the full [batch, dim_x, dim_x] Hessian.
         trace_term = torch.zeros(batch_size, 1, device=self.device)
         for i in range(dim_x):
             # d(du/dxi)/dx -> row i of the Hessian
@@ -167,16 +163,11 @@ class DGMSolver:
         target = self.eqn.terminal_condition(x, T_terminal=self.cfg.T)
         return torch.mean((u_T - target) ** 2)
 
-    def solve(self, callback=None) -> Dict[str, Any]:
+    def solve(self) -> Dict[str, Any]:
         """
         Executes the DGM training loop.
 
         See Thesis Section 8.3, Algorithm 6.
-
-        Args:
-            callback (callable, optional): Invoked at the end of each stage with
-                signature callback(stage, loss, solver). Useful for monitoring
-                in notebooks.
 
         Returns:
             Dict[str, Any]: A dictionary containing the trained model and
@@ -215,9 +206,6 @@ class DGMSolver:
                     f"TC_Loss={loss_tc.item():.4e} | "
                     f"Total={loss.item():.4e}"
                 )
-
-            if callback is not None:
-                callback(stage, loss.item(), self)
 
         return self.get_results()
 
