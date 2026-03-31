@@ -25,7 +25,8 @@ The solver overcomes the curse of dimensionality by approximating the solution m
     *   **Uncoupled:** Standard systems where forward dynamics are independent of $(Y, Z)$.
     *   **Coupled:** Systems where $X_t$ depends on $Y_t$ and $Z_t$, resolved via a Global Picard Iteration.
     *   **McKean-Vlasov:** Mean-field systems where coefficients depend on the law $\mathcal{L}(X_t, Y_t, Z_t)$.
-*   **Rigorous Benchmarking:** Includes five benchmark equations with analytical solutions for the different problem classes. 
+*   **Deep Galerkin Method (DGM):** A PDE-based solver for uncoupled systems. The solver automatically constructs the Feynman-Kac PDE from the FBSDE coefficients, requiring no hand-derived PDE formulation.
+*   **Benchmarking:** Includes five benchmark equations with analytical solutions for the different problem classes.
 *   **Two Z-Approximation Schemes:** Supports both **Gradient-based** and **Regression-based** approximation for the control process.
 *   **GPU Accelerated:** Fully vectorized PyTorch implementation supporting CUDA execution for high-dimensional problems.
 
@@ -119,7 +120,7 @@ print("Both methods completed successfully")
 from dim_fbsde.utils import plot_pathwise_comparison
 
 # Compare both methods against analytical solution
-# Model-based evaluation ensures fair comparison on identical X paths
+# All methods are evaluated on identical X paths for a fair comparison
 fig, axes = plot_pathwise_comparison(
     solutions=[solution_grad],                           # X paths from gradient method
     labels=['DIM (Gradient)', 'DIM (Regression)'],       # Method labels
@@ -149,13 +150,15 @@ dim_fbsde/
 ├── solvers/               # Numerical solvers
 │   ├── uncoupled.py       # Deep Picard iteration for uncoupled systems
 │   ├── coupled.py         # Global iteration for coupled systems
-│   └── mckean_vlasov.py   # Global iteration for mean-field systems
+│   ├── mckean_vlasov.py   # Global iteration for mean-field systems
+│   └── dgm.py             # Deep Galerkin Method for uncoupled systems (PDE-based)
 ├── nets/                  # Neural network architectures
-│   └── mlp.py             # Multi-layer perceptron for Y and Z approximation
+│   ├── mlp.py             # Multi-layer perceptron for Y and Z approximation
+│   └── dgm.py             # LSTM-style DGM network architecture
 ├── utils/                 # Utilities
 │   ├── visualizations.py  # Pathwise comparison and error analysis plots
 │   └── plot_style.py      # Publication-quality matplotlib style configuration
-└── config.py              # Configuration dataclasses (SolverConfig, TrainingConfig)
+└── config.py              # Configuration dataclasses (SolverConfig, TrainingConfig, DGMConfig)
 ```
 
 ## Advanced Usage
@@ -225,6 +228,10 @@ Z_t = \nabla_x \mathcal{N}_Y(t, X_t) \cdot \sigma(t, X_t, Y_t, Z_t)
 ```math
 Z_t \approx \frac{1}{\Delta t} \mathbb{E}\left[ (Y_{t+\Delta t} - Y_t) \Delta W_t^\top \mid \mathcal{F}_t \right]
 ```
+
+### Deep Galerkin Method (Uncoupled PDE Solver)
+
+For uncoupled systems, the nonlinear Feynman-Kac theorem provides an equivalent semilinear parabolic PDE. The DGM solver trains an LSTM-style network to minimize the PDE residual at randomly sampled collocation points. The PDE is constructed automatically from the FBSDE's drift, diffusion, and driver functions, so no manual PDE derivation is required.
 
 ## Examples
 

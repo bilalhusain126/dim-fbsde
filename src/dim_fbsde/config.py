@@ -1,9 +1,9 @@
 """
-Configuration dataclasses for the DIM FBSDE solvers.
+Configuration dataclasses for the DIM and DGM FBSDE solvers.
 """
 
-from dataclasses import dataclass
-from typing import Literal
+from dataclasses import dataclass, field
+from typing import Literal, Tuple
 
 @dataclass
 class TrainingConfig:
@@ -55,7 +55,6 @@ class SolverConfig:
     z_method: Literal['gradient', 'regression'] = 'gradient'
 
     device: str = "cpu"
-    dtype: str = "float32"
 
     def __post_init__(self):
         """Validate configuration parameters."""
@@ -75,3 +74,59 @@ class SolverConfig:
     @property
     def dt(self) -> float:
         return self.T / self.N
+
+
+@dataclass
+class DGMConfig:
+    """
+    Hyperparameters for the Deep Galerkin Method solver.
+    """
+    T: float = 1.0
+    dim_x: int = 1
+
+    # Network
+    n_layers: int = 3
+    layer_width: int = 50
+
+    # Sampling
+    domain: Tuple[float, float] = (-2.0, 5.0)  # (lo, hi) bounds for collocation points
+    N1: int = 1000          # interior batch size
+    N2: int = 1000          # terminal batch size
+
+    # Training
+    n_stages: int = 10_000
+    n_steps: int = 10
+    learning_rate: float = 1e-4
+    log_every: int = 1000       # stages between log messages
+    verbose: bool = True
+
+    device: str = "cpu"
+
+    def __post_init__(self):
+        """Validate configuration parameters."""
+        if self.T <= 0:
+            raise ValueError(f"T (terminal time) must be positive, got {self.T}")
+        if self.dim_x <= 0:
+            raise ValueError(f"dim_x must be positive, got {self.dim_x}")
+        if self.n_layers <= 0:
+            raise ValueError(f"n_layers must be positive, got {self.n_layers}")
+        if self.layer_width <= 0:
+            raise ValueError(f"layer_width must be positive, got {self.layer_width}")
+        if len(self.domain) != 2 or self.domain[0] >= self.domain[1]:
+            raise ValueError(f"domain must be a (lo, hi) tuple with lo < hi, got {self.domain}")
+        if self.N1 <= 0:
+            raise ValueError(f"N1 must be positive, got {self.N1}")
+        if self.N2 <= 0:
+            raise ValueError(f"N2 must be positive, got {self.N2}")
+        if self.n_stages <= 0:
+            raise ValueError(f"n_stages must be positive, got {self.n_stages}")
+        if self.n_steps <= 0:
+            raise ValueError(f"n_steps must be positive, got {self.n_steps}")
+        if self.learning_rate <= 0:
+            raise ValueError(f"learning_rate must be positive, got {self.learning_rate}")
+        if self.log_every <= 0:
+            raise ValueError(f"log_every must be positive, got {self.log_every}")
+
+    @property
+    def total_steps(self) -> int:
+        return self.n_stages * self.n_steps

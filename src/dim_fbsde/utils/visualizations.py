@@ -312,7 +312,7 @@ def plot_Y_error_subplots(
     models, z_methods, labels, equation, X_paths, time_grid, device,
     analytical_Y_func, analytical_Y_kwargs=None,
     num_error_paths=50, spaghetti_alpha=0.05, log_eps=1e-9,
-    y_component_idx=0, z_fp_iterations=5, figsize=None
+    y_component_idx=0, z_fp_iterations=5, figsize=None, colors=None, ncols=3
 ):
     """
     Plot Y approximation errors as spaghetti plots with median.
@@ -336,6 +336,8 @@ def plot_Y_error_subplots(
         y_component_idx (int, optional): Y component index. Defaults to 0.
         z_fp_iterations (int, optional): Fixed-point iterations for Z. Defaults to 5.
         figsize (tuple, optional): Figure size as (width, height). If None, defaults to (6*ncols, 4*nrows).
+        colors (list, optional): List of colours for each model. If None, uses a built-in default palette.
+        ncols (int, optional): Maximum number of columns in the subplot grid. Defaults to 3.
 
     Returns:
         matplotlib.figure.Figure: The figure
@@ -380,7 +382,7 @@ def plot_Y_error_subplots(
 
     # Setup subplots
     num_models = len(models)
-    ncols = min(num_models, 2)
+    ncols = min(num_models, ncols)
     nrows = (num_models + ncols - 1) // ncols
 
     fig, axes = plt.subplots(
@@ -389,7 +391,8 @@ def plot_Y_error_subplots(
     )
     axes = axes.flatten()
 
-    colors = ['r', 'g', 'orange', 'purple', 'brown', 'pink']
+    if colors is None:
+        colors = ['r', 'g', 'purple', 'orange', 'brown', 'pink']
 
     # Collect all errors to determine global y-axis limits
     all_errors = []
@@ -453,7 +456,7 @@ def plot_Z_error_subplots(
     models, z_methods, labels, equation, X_paths, time_grid, device,
     analytical_Z_func, analytical_Z_kwargs=None,
     num_error_paths=50, spaghetti_alpha=0.05, log_eps=1e-9,
-    z_fp_iterations=5, figsize=None
+    z_fp_iterations=5, figsize=None, colors=None, ncols=3
 ):
     """
     Plot Z approximation errors as spaghetti plots with median.
@@ -476,6 +479,8 @@ def plot_Z_error_subplots(
         log_eps (float, optional): Minimum value for log scale. Defaults to 1e-9.
         z_fp_iterations (int, optional): Fixed-point iterations for Z. Defaults to 5.
         figsize (tuple, optional): Figure size as (width, height). If None, defaults to (6*ncols, 4*nrows).
+        colors (list, optional): List of colours for each model. If None, uses a built-in default palette.
+        ncols (int, optional): Maximum number of columns in the subplot grid. Defaults to 3.
 
     Returns:
         matplotlib.figure.Figure: The figure
@@ -530,7 +535,7 @@ def plot_Z_error_subplots(
 
     # Setup subplots
     num_models = len(models)
-    ncols = min(num_models, 2)
+    ncols = min(num_models, ncols)
     nrows = (num_models + ncols - 1) // ncols
 
     fig, axes = plt.subplots(
@@ -539,7 +544,8 @@ def plot_Z_error_subplots(
     )
     axes = axes.flatten()
 
-    colors = ['r', 'g', 'orange', 'purple', 'brown', 'pink']
+    if colors is None:
+        colors = ['r', 'g', 'purple', 'orange', 'brown', 'pink']
 
     # Collect all errors to determine global y-axis limits
     all_errors = []
