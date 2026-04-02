@@ -154,7 +154,7 @@ dim_fbsde/
 │   └── dgm.py             # Deep Galerkin Method for uncoupled systems (PDE-based)
 ├── nets/                  # Neural network architectures
 │   ├── mlp.py             # Multi-layer perceptron for Y and Z approximation
-│   └── dgm.py             # LSTM-style DGM network architecture
+│   └── dgm.py             # DGM network architecture
 ├── utils/                 # Utilities
 │   ├── visualizations.py  # Pathwise comparison and error analysis plots
 │   └── plot_style.py      # Matplotlib style configuration
