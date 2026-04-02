@@ -157,7 +157,7 @@ dim_fbsde/
 │   └── dgm.py             # LSTM-style DGM network architecture
 ├── utils/                 # Utilities
 │   ├── visualizations.py  # Pathwise comparison and error analysis plots
-│   └── plot_style.py      # Publication-quality matplotlib style configuration
+│   └── plot_style.py      # Matplotlib style configuration
 └── config.py              # Configuration dataclasses (SolverConfig, TrainingConfig, DGMConfig)
 ```
 
