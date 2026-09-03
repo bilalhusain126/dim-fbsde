@@ -256,9 +256,9 @@ If you use this code in your research, please cite:
 
 **Bilal Saleh Husain**
 
-Master of Mathematics, University of Toronto, 2025
+M.Sc. in Mathematics, University of Toronto, 2025
 
-Contact: bilal.husain@mail.utoronto.ca | GitHub: [@bilalhusain126](https://github.com/bilalhusain126)
+Contact: bilal.husain@alumni.utoronto.ca | GitHub: [@bilalhusain126](https://github.com/bilalhusain126)
 
 ---
 
