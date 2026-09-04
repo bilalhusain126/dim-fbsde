@@ -46,7 +46,7 @@ class CoupledFBSDESolver:
                  training_config: TrainingConfig,
                  nn_Y: torch.nn.Module,
                  nn_Z: Optional[torch.nn.Module] = None,
-                 forward_scheme: str = 'feedback'):
+                 forward_scheme: Optional[str] = None):
         """
         Initializes the Coupled Solver.
 
@@ -56,16 +56,21 @@ class CoupledFBSDESolver:
             training_config (TrainingConfig): Training settings for the inner uncoupled solver.
             nn_Y (nn.Module): Neural network for approximating Y.
             nn_Z (nn.Module, optional): Neural network for approximating Z.
-            forward_scheme (str): How the coupling terms are evaluated during the
-                forward simulation.
-                'feedback' (default): evaluate the current networks at the
-                simulated state, so the drift and diffusion receive
-                Y = N_Y(t, X_t) as a function of the state being simulated.
-                This implements the Markovian iteration of Bender and Zhang
-                (2008).
+            forward_scheme (str, optional): How the coupling terms are evaluated
+                during the forward simulation.
+                None (default): 'feedback' if nn_Z is given, otherwise 'legacy'.
+                'feedback': evaluate the current networks at the simulated
+                state, so the drift and diffusion receive Y = N_Y(t, X_t) as a
+                function of the state being simulated. This implements the
+                Markovian iteration of Bender and Zhang (2008). Requires nn_Z
+                to be effective: without a Z-network there is no state-function
+                for Z, so Z falls back to the stored paths and is paired with a
+                current-state Y, which measured worse than 'legacy'.
                 'legacy': reuse the stored backward paths from the previous
                 global iteration, matched by path index (Thesis Algorithm 4).
         """
+        if forward_scheme is None:
+            forward_scheme = 'feedback' if nn_Z is not None else 'legacy'
         self.forward_scheme = forward_scheme
         self.eqn = equation
         self.cfg = solver_config

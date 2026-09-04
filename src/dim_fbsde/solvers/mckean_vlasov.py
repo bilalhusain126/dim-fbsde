@@ -49,7 +49,7 @@ class McKeanVlasovSolver:
                  training_config: TrainingConfig,
                  nn_Y: torch.nn.Module,
                  nn_Z: Optional[torch.nn.Module] = None,
-                 forward_scheme: str = 'feedback'):
+                 forward_scheme: Optional[str] = None):
         """
         Initializes the McKean-Vlasov Solver.
 
@@ -59,17 +59,22 @@ class McKeanVlasovSolver:
             training_config (TrainingConfig): Training settings for the inner uncoupled solver.
             nn_Y (nn.Module): Neural network for approximating Y.
             nn_Z (nn.Module, optional): Neural network for approximating Z.
-            forward_scheme (str): How the coupling and law terms are evaluated during
-                the forward simulation.
-                'feedback' (default): evaluate the current networks at the simulated
-                state, so the coefficients receive Y = N_Y(t, X_t) at the point each
-                path is currently at, and the law statistics are computed from the
+            forward_scheme (str, optional): How the coupling and law terms are
+                evaluated during the forward simulation.
+                None (default): 'feedback' if nn_Z is given, otherwise 'legacy'.
+                'feedback': evaluate the current networks at the simulated state,
+                so the coefficients receive Y = N_Y(t, X_t) at the point each path
+                is currently at, and the law statistics are computed from the
                 current batch at the current step. The forward pass is then a
                 particle simulation of the McKean-Vlasov dynamics driven by the
-                current decoupling-field approximation.
+                current decoupling-field approximation. Requires nn_Z to be
+                effective: without a Z-network, Z falls back to the stored paths
+                and is paired with a current-state Y.
                 'legacy': reuse the stored backward paths and law from the previous
                 global iteration, matched by path index (Thesis Algorithm 5).
         """
+        if forward_scheme is None:
+            forward_scheme = 'feedback' if nn_Z is not None else 'legacy'
         self.forward_scheme = forward_scheme
         self.eqn = equation
         self.cfg = solver_config
