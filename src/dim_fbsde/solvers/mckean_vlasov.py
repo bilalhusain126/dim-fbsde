@@ -48,8 +48,7 @@ class McKeanVlasovSolver:
                  solver_config: SolverConfig,
                  training_config: TrainingConfig,
                  nn_Y: torch.nn.Module,
-                 nn_Z: Optional[torch.nn.Module] = None,
-                 coupling_scheme: Optional[str] = None):
+                 nn_Z: Optional[torch.nn.Module] = None):
         """
         Initializes the McKean-Vlasov Solver.
 
@@ -59,16 +58,7 @@ class McKeanVlasovSolver:
             training_config (TrainingConfig): Training settings for the inner uncoupled solver.
             nn_Y (nn.Module): Neural network for approximating Y.
             nn_Z (nn.Module, optional): Neural network for approximating Z.
-            coupling_scheme (str, optional): How Y, Z and the law enter the
-                forward simulation. 'feedback' evaluates the current networks at
-                the simulated state and computes the law from the current batch.
-                'lagged_state' uses the stored paths and law from the previous
-                global iteration, matched by path index. Defaults to 'feedback'
-                if nn_Z is given and 'lagged_state' otherwise.
         """
-        if coupling_scheme is None:
-            coupling_scheme = 'feedback' if nn_Z is not None else 'lagged_state'
-        self.coupling_scheme = coupling_scheme
         self.eqn = equation
         self.cfg = solver_config
         self.train_cfg = training_config
@@ -189,64 +179,41 @@ class McKeanVlasovSolver:
         """
         Simulates the forward process X.
         
-        If `is_initial` is False, the coupling and law terms are evaluated according
-        to the configured coupling scheme: 'feedback' evaluates the current networks
-        at the simulated state and computes the law from the current batch, whereas
-        'lagged_state' uses the stored paths from the previous global iteration.
+        If `is_initial` is False, it calculates the drift and diffusion coefficients using the 
+        empirical statistics (law) derived from the stored global paths (self.X, self.Y_path).
         """
         M = self.cfg.num_paths
         N = self.cfg.N
         dt = self.cfg.dt
-
+        
         t_grid = torch.linspace(0, self.cfg.T, N + 1, device=self.device)
-
+        
         X = torch.zeros(M, N + 1, self.eqn.dim_x, device=self.device)
         dW = torch.randn(M, N, self.eqn.dim_w, device=self.device) * np.sqrt(dt)
-
+        
         # Initial condition
         # self.eqn.x0 already has shape [1, dim_x], just repeat to [M, dim_x]
         X[:, 0, :] = self.eqn.x0.repeat(M, 1)
 
-        use_feedback = self.coupling_scheme == 'feedback' and not is_initial
-        if use_feedback:
-            self.nn_Y.eval()
-            if self.nn_Z is not None:
-                self.nn_Z.eval()
-
         for i in range(N):
             t = t_grid[i]
             x_curr = X[:, i, :]
-
+            
             mean_x = None
             mean_y = None
-
+            
             # Placeholders for initial run
             y_curr = torch.zeros(M, self.eqn.dim_y, device=self.device)
             z_curr = torch.zeros(M, self.eqn.dim_y, self.eqn.dim_w, device=self.device)
 
-            if use_feedback:
-                # Evaluate the current decoupling-field approximation at the
-                # simulated state, and compute the law statistics from the
-                # current batch at the current step. Without a Z-network
-                # (gradient scheme), Z has no state-function representation
-                # here, so the stored paths remain the only available estimate.
-                nn_in = torch.cat([t.repeat(M).unsqueeze(1), x_curr], dim=1)
-                with torch.no_grad():
-                    y_curr = self.nn_Y(nn_in)
-                    if self.nn_Z is not None:
-                        z_curr = self.nn_Z(nn_in).reshape(M, self.eqn.dim_y, self.eqn.dim_w)
-                    else:
-                        z_curr = self.Z_path[:, i, :, :]
-                mean_x = x_curr
-                mean_y = y_curr
-            elif not is_initial:
+            if not is_initial:
                 # Use stored paths from previous iteration
                 y_curr = self.Y_path[:, i, :]
                 z_curr = self.Z_path[:, i, :, :]
-
+                
                 # Pass the full distribution (batch) to the equation
                 # The equation will handle the pairwise distance / kernel logic
-                mean_x = self.X[:, i, :]
+                mean_x = self.X[:, i, :] 
                 mean_y = self.Y_path[:, i, :]
 
             # 'mean_x' argument carries the full batch (or None)
