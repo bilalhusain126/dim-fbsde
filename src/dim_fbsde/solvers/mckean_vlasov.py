@@ -87,7 +87,8 @@ class McKeanVlasovSolver:
         # 1. Initialization (k=0)
         M, N = self.cfg.num_paths, self.cfg.N
         self.Y_path = torch.zeros(M, N + 1, self.eqn.dim_y, device=self.device)
-        self.Z_path = torch.zeros(M, N, self.eqn.dim_y, self.eqn.dim_w, device=self.device)
+        self.Z_path = None if self.cfg.z_method == 'none' else \
+            torch.zeros(M, N, self.eqn.dim_y, self.eqn.dim_w, device=self.device)
         
         # Initial X simulation: Assume zero interaction/mean initially.
         # This provides the initial distribution estimate L^(0).
@@ -161,7 +162,8 @@ class McKeanVlasovSolver:
             # Step C: Update Global Iterates
             self.X = torch.tensor(solution_inner['X'], device=self.device)
             self.Y_path = torch.tensor(solution_inner['Y'], device=self.device)
-            self.Z_path = torch.tensor(solution_inner['Z'], device=self.device)
+            if solution_inner['Z'] is not None:
+                self.Z_path = torch.tensor(solution_inner['Z'], device=self.device)
 
             # Step D: Convergence Check
             # Monitor the RMS change in the Y trajectories between global iterations.
@@ -204,12 +206,12 @@ class McKeanVlasovSolver:
             
             # Placeholders for initial run
             y_curr = torch.zeros(M, self.eqn.dim_y, device=self.device)
-            z_curr = torch.zeros(M, self.eqn.dim_y, self.eqn.dim_w, device=self.device)
+            z_curr = None if self.Z_path is None else torch.zeros(M, self.eqn.dim_y, self.eqn.dim_w, device=self.device)
 
             if not is_initial:
                 # Use stored paths from previous iteration
                 y_curr = self.Y_path[:, i, :]
-                z_curr = self.Z_path[:, i, :, :]
+                z_curr = None if self.Z_path is None else self.Z_path[:, i, :, :]
                 
                 # Pass the full distribution (batch) to the equation
                 # The equation will handle the pairwise distance / kernel logic
@@ -237,7 +239,7 @@ class McKeanVlasovSolver:
             'time': np.linspace(0, self.cfg.T, self.cfg.N + 1),
             'X': self.X.cpu().numpy(),
             'Y': self.Y_path.cpu().numpy(),
-            'Z': self.Z_path.cpu().numpy(),
+            'Z': None if self.Z_path is None else self.Z_path.cpu().numpy(),
             'global_history': self.global_history
         }
         

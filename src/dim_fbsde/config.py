@@ -52,7 +52,9 @@ class SolverConfig:
     # OUTER Iterations: How many times the Coupled solver alternates between simulating X and solving Y/Z.
     global_iterations: int = 10
 
-    z_method: Literal['gradient', 'regression'] = 'gradient'
+    # 'none' skips Z: for equations whose driver and coefficients do not depend on Z,
+    # which then receive z=None. Saves the [num_paths, N, dim_y, dim_w] Z paths.
+    z_method: Literal['gradient', 'regression', 'none'] = 'gradient'
 
     device: str = "cpu"
 
@@ -68,8 +70,8 @@ class SolverConfig:
             raise ValueError(f"picard_iterations must be positive, got {self.picard_iterations}")
         if self.global_iterations <= 0:
             raise ValueError(f"global_iterations must be positive, got {self.global_iterations}")
-        if self.z_method not in ['gradient', 'regression']:
-            raise ValueError(f"z_method must be 'gradient' or 'regression', got {self.z_method}")
+        if self.z_method not in ['gradient', 'regression', 'none']:
+            raise ValueError(f"z_method must be 'gradient', 'regression' or 'none', got {self.z_method}")
 
     @property
     def dt(self) -> float:

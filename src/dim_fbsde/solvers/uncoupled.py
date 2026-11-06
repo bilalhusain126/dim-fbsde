@@ -105,7 +105,8 @@ class UncoupledFBSDESolver:
         # 2. Initialization
         # Initialize Y and Z paths to zero before the first iteration.
         self.Y = torch.zeros(self.cfg.num_paths, self.cfg.N + 1, self.eqn.dim_y, device=self.device)
-        self.Z = torch.zeros(self.cfg.num_paths, self.cfg.N, self.eqn.dim_y, self.eqn.dim_w, device=self.device)
+        self.Z = None if self.cfg.z_method == 'none' else \
+            torch.zeros(self.cfg.num_paths, self.cfg.N, self.eqn.dim_y, self.eqn.dim_w, device=self.device)
         
         # Enforce terminal condition Y_T = g(X_T) explicitly.
         self.Y[:, -1, :] = self.eqn.terminal_condition(self.X[:, -1, :])
@@ -117,7 +118,7 @@ class UncoupledFBSDESolver:
         # Main Fixed-Point Iteration
         for k in range(self.cfg.picard_iterations):
             Y_prev = self.Y.clone()
-            Z_prev = self.Z.clone()
+            Z_prev = None if self.Z is None else self.Z.clone()
 
             # Step A: Optimization (Training Phase)
             # Train the networks to approximate the conditional expectations for the next iterate.
@@ -203,7 +204,7 @@ class UncoupledFBSDESolver:
             t = self.time_grid[i]
             X_i = self.X[:, i, :]
             Y_i = Y_tensor[:, i, :]
-            Z_i = Z_tensor[:, i, :, :]
+            Z_i = None if Z_tensor is None else Z_tensor[:, i, :, :]
             
             f_val = self.eqn.driver(t, X_i, Y_i, Z_i, T_terminal=self.cfg.T)
             
@@ -331,7 +332,7 @@ class UncoupledFBSDESolver:
         if self.nn_Z: self.nn_Z.eval()
         
         Y_new = torch.zeros_like(Y_prev)
-        Z_new = torch.zeros_like(Z_prev)
+        Z_new = None if Z_prev is None else torch.zeros_like(Z_prev)
         M = self.cfg.num_paths
         
         for i in range(self.cfg.N):
@@ -389,7 +390,7 @@ class UncoupledFBSDESolver:
             'time': self.time_grid.cpu().numpy(),
             'X': self.X.cpu().numpy(),
             'Y': self.Y.cpu().numpy(),
-            'Z': self.Z.cpu().numpy(),
+            'Z': None if self.Z is None else self.Z.cpu().numpy(),
             'history': self.history
         }
 
